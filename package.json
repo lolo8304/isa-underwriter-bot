@@ -1,5 +1,5 @@
 {
-  "name": "examples",
+  "name": "IsaBot",
   "version": "0.6.0",
   "description": "Examples for the Bot Builder framework.",
   "author": "Microsoft Corp.",
@@ -10,7 +10,9 @@
     "busboy": "^0.2.13",
     "chrono-node": "^1.2.5",
     "jsonwebtoken": "^7.1.9",
+    "lodash": "^4.17.4",
     "node-uuid": "^1.4.7",
+    "nodemon": "^1.11.0",
     "promise": "^7.1.1",
     "request": "^2.81.0",
     "restify": "^4.3.0",
@@ -22,6 +24,6 @@
     "mocha": "^2.4.5"
   },
   "scripts": {
-    "start": "node ./app.js"
+    "start": "./node_modules/.bin/nodemon ./app.js"
   }
 }
