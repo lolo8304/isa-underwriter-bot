@@ -33,7 +33,8 @@ const ENTITIES = {
   BUSINESS_LINE: 'product::type',
   COUNTRY: 'builtin.geography.country',
   CUSTOMER: 'customer::name',
-  NUMBER: 'builtin.number'
+  NUMBER: 'builtin.number',
+  SOLUTION: 'solution'
 };
 
 // Add global LUIS recognizer to bot
@@ -113,16 +114,34 @@ dialog.matches('risk', [
   }
 ]);
 
+function nextCountry(countries) {
+  var emptyOnes = countries.filter(function(country) {
+    return !country.solution;
+  });
+  return emptyOnes[0];
+}
+
 bot.dialog('ChooseSolution', [
     function (session, args) {
         // Save previous state (create on first call)
-        session.dialogData.index = args ? (args.index? args.index : 0) : 0;
-        session.dialogData.program = args ? args.program : null;
+        if (args && args.program) {
+          session.dialogData.program = args.program;
+        }
 
         var msg = new builder.Message(session);
         msg.attachmentLayout(builder.AttachmentLayout.carousel)
         var attachments = [];
-        var country = session.dialogData.program.countries[session.dialogData.index];
+        var country = nextCountry(session.dialogData.program.countries);
+        if (country && args && args.program) {
+          country.solution = "integrated";
+        }
+        if (country && !args) {
+          country.solution = "coordinated";
+        }
+        if (!country) {
+          session.replaceDialog('summary', session.dialogData);
+          return;
+        }        
         attachments.push(
           new builder.HeroCard(session)
               .title(country.name)
@@ -137,17 +156,10 @@ bot.dialog('ChooseSolution', [
         );
         msg.attachments(attachments);
         session.send(msg);
-    },
-    function (session, results) {
-        session.dialogData.program.countries[session.dialogData.index].solution = results.response;
-        session.dialogData.index++;
-        if (session.dialogData.index >= session.dialogData.program.countries.length) {
-            session.replaceDialog('summary', session.dialogData);
-        } else {
-            session.replaceDialog('ChooseSolution', session.dialogData);
-        }
     }
 ]);
+
+
 
 bot.dialog('summary', [
   (session, args) => {
