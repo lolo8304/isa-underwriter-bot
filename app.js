@@ -90,7 +90,29 @@ dialog.matches('risk', [
   function (session, results) {
         if (results.response) {
           session.dialogData.program.premium = results.response;
-          session.send("All set. Give me a few seconds to give you the best option");
+          builder.Prompts.text(session, "All set. Give me a few seconds to give you the best option");
         }
-    }
+  },
+  function (session, results) {
+          var msg = new builder.Message(session);
+          msg.attachmentLayout(builder.AttachmentLayout.carousel)
+          var attachments = [];
+          session.dialogData.program.countries.forEach(function(country) {
+            attachments.push(
+              new builder.HeroCard(session)
+                  .title(country)
+                  .subtitle("Program Premium: "+session.dialogData.program.premium)
+                  .text("The recommended options **"+country+"** are)")
+                  .images([builder.CardImage.create(session, 'http://petersapparel.parseapp.com/img/whiteshirt.png')])
+                  .buttons([
+                      builder.CardAction.imBack(session, "choose program integrated for "+country, "integrated"),
+                      builder.CardAction.imBack(session, "choose program coordinated for "+country, "coordinated"),
+                      builder.CardAction.imBack(session, "choose program fos for "+country, "fos/fee of service")
+                  ])
+            );
+          });
+          msg.attachments(attachments);
+          session.send(msg);    
+  }
 ]);
+
