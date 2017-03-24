@@ -61,8 +61,9 @@ dialog.matches('risk', [
     if (allowedBL.indexOf(businessLine) === -1) {
       session.endDialog('Sorry at this moment I can only help you with Property policies');
     } else if (countries.length && customer && businessLine) {
-      var startDate = new Date();
-      var endDate = startDate.setFullYear(startDate.getFullYear+1);
+      var startDate = new Date().getTime();
+      var endDate = new Date();
+      endDate.setFullYear(endDate.getFullYear() + 1);
       session.dialogData.program = {
         countries: countries,
         customer: {
