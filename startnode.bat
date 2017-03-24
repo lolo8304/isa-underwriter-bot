@@ -1,1 +1,1 @@
-nodemon -e js,json --watch . --watch routes --exec npm start
+nodemon -e js,json --watch . --exec npm start

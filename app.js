@@ -25,7 +25,7 @@ var connector = new builder.ChatConnector({
 // Listen for messages from users 
 server.post('/api/messages', connector.listen());
 
-var bot = new builder.UniversalBot(connector);//, [init]);
+var bot = new builder.UniversalBot(connector);
 
 // Entity Constants
 const ENTITIES = {
@@ -61,7 +61,19 @@ dialog.matches('risk', [
     if (allowedBL.indexOf(businessLine) === -1) {
       session.endDialog('Sorry at this moment I can only help you with Property policies');
     } else if (countries.length && customer && businessLine) {
-      builder.Prompts.text(session, 'Please, describe the risk the customer wants to insure.');
+      var startDate = new Date();
+      var endDate = startDate.setFullYear(startDate.getFullYear+1);
+      session.dialogData.program = {
+        countries: countries,
+        customer: {
+          name: customer
+        },
+        businessLine: businessLine,
+        startDate: startDate,
+        endDate: endDate
+      };
+      session.send("I have created a programm in **"+businessLine+"** for countries **"+countries+"**");      
+      builder.Prompts.text(session,'What is the expected **global premium** starting tomorrow for 1 year');
     }
     /*
     if (!countries.length) {
@@ -74,5 +86,11 @@ dialog.matches('risk', [
       // No businessLine
     }
     */
-  }
+  },
+  function (session, results) {
+        if (results.response) {
+          session.dialogData.program.premium = results.response;
+          session.send("All set. Give me a few seconds to give you the best option");
+        }
+    }
 ]);
