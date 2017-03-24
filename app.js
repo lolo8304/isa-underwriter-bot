@@ -6,6 +6,7 @@ var builder = require('./core/');
 var restify = require('restify');
 var request = require('request');
 var _ = require('lodash');
+var moment = require('moment');
 
 
 // Setup Restify Server
@@ -63,9 +64,8 @@ dialog.matches('risk', [
     if (allowedBL.indexOf(businessLine) === -1) {
       session.endDialog('Sorry at this moment I can only help you with Property policies');
     } else if (countries.length && customer && businessLine) {
-      var startDate = new Date().getTime();
-      var endDate = new Date();
-      endDate.setFullYear(endDate.getFullYear() + 1);
+      var startDate = moment(new Date().getTime()).format('LL');
+      var endDate = moment(new Date().setFullYear(new Date().getFullYear() + 1)).format('LL');
       session.dialogData.program = {
         customer: {
           name: customer
@@ -160,17 +160,40 @@ bot.dialog('ChooseSolution', [
 ]);
 
 
-dialog.matches('solution', [
-  function (session, args, next) {
-    const solution = _.map(builder.EntityRecognizer.findAllEntities(args.entities || [], ENTITIES.SOLUTION) || [], 'entity');
-    const country = (builder.EntityRecognizer.findEntity(args.entities || [], ENTITIES.COUNTRY) || {}).entity;
 
-        session.dialogData.program.countries[session.dialogData.index].solution = results.response;
-        session.dialogData.index++;
-        if (session.dialogData.index >= session.dialogData.program.countries.length) {
-            session.replaceDialog('summary', session.dialogData);
-        } else {
-            session.replaceDialog('ChooseSolution', session.dialogData);
-        }
+bot.dialog('summary', [
+  (session, args) => {
+    session.dialogData.program = args.program;
+    const program = session.dialogData.program;
+    const attachments = [new builder.HeroCard(session).title(`Program created for Customer ${program.customer.name}`).subtitle(`Business Line is ${program.businessLine}`).text(`A program has been created with an estimated global premium ${program.premium}€ for the period from ${program.startDate} to ${program.endDate}`)];
+    program.countries.forEach(country => {
+      attachments.push(new builder.HeroCard(session)
+        .title(country.name)
+        .subtitle(`Selected solution: ${country.solution}`)
+        .images([builder.CardImage.create(session, getFlagURL(country.name || 'france'))]));
+    });
+    const msg = new builder.Message(session)
+      .textFormat(builder.TextFormat.xml)
+      .attachments(attachments);
+    session.send(msg);
   }
 ]);
+
+function getFlagURL(name) {
+  switch (name.toLowerCase()) {
+    case 'spain':
+      return "http://www.geognos.com/api/en/countries/flag/ES.png";
+    case 'us':
+      return "http://www.geognos.com/api/en/countries/flag/US.png";
+    case 'germany':
+      return "http://www.geognos.com/api/en/countries/flag/DE.png";
+    case 'france':
+      return "http://www.geognos.com/api/en/countries/flag/FR.png";
+    case 'uk':
+      return "http://www.geognos.com/api/en/countries/flag/GB.png";
+    case 'switzerland':
+      return "http://www.geognos.com/api/en/countries/flag/CH.png";
+    default:
+      return "http://www.geognos.com/api/en/countries/flag/FR.png";
+  }
+}
