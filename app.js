@@ -160,6 +160,10 @@ bot.dialog('summary', [
         .subtitle(`Selected solution: ${country.solution}`)
         .images([builder.CardImage.create(session, getFlagURL(country.name || 'france'))]));
     });
+    attachments.push(new builder.HeroCard(session).title('Are you happy with the proposal').buttons([
+      builder.CardAction.openUrl(session, "https://www.axa-im.com/en/thank-you-query", "Yes"),
+      builder.CardAction.imBack(session, "I need advise", "I need advise")
+    ]));
     const msg = new builder.Message(session)
       .textFormat(builder.TextFormat.xml)
       .attachments(attachments);
