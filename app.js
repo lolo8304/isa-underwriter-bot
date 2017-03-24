@@ -29,9 +29,10 @@ var bot = new builder.UniversalBot(connector);
 
 // Entity Constants
 const ENTITIES = {
+  BUSINESS_LINE: 'product::type',
   COUNTRY: 'builtin.geography.country',
   CUSTOMER: 'customer::name',
-  BUSINESS_LINE: 'product::type'
+  NUMBER: 'builtin.number'
 };
 
 // Add global LUIS recognizer to bot
@@ -55,14 +56,15 @@ const allowedBL = ['property'];
 
 dialog.matches('risk', [
   function (session, args, next) {
-    const countries = _.map(builder.EntityRecognizer.findAllEntities(args.entities, ENTITIES.COUNTRY) || [], 'entity');
-    const customer = (builder.EntityRecognizer.findEntity(args.entities, ENTITIES.CUSTOMER) || {}).entity;
-    const businessLine = (builder.EntityRecognizer.findEntity(args.entities, ENTITIES.BUSINESS_LINE) || {}).entity;
+    const countries = _.map(builder.EntityRecognizer.findAllEntities(args.entities || [], ENTITIES.COUNTRY) || [], 'entity');
+    const customer = (builder.EntityRecognizer.findEntity(args.entities || [], ENTITIES.CUSTOMER) || {}).entity;
+    const businessLine = (builder.EntityRecognizer.findEntity(args.entities || [], ENTITIES.BUSINESS_LINE) || {}).entity;
     if (allowedBL.indexOf(businessLine) === -1) {
       session.endDialog('Sorry at this moment I can only help you with Property policies');
     } else if (countries.length && customer && businessLine) {
-      var startDate = new Date();
-      var endDate = startDate.setFullYear(startDate.getFullYear+1);
+      var startDate = new Date().getTime();
+      var endDate = new Date();
+      endDate.setFullYear(endDate.getFullYear() + 1);
       session.dialogData.program = {
         countries: countries,
         customer: {
@@ -72,7 +74,7 @@ dialog.matches('risk', [
         startDate: startDate,
         endDate: endDate
       };
-      session.send("I have created a programm in **"+businessLine+"** for countries **"+countries+"**");      
+      session.send("I have created a **"+businessLine+"** program  for **"+customer+"** in countries **"+countries+"**");
       builder.Prompts.text(session,'What is the expected **global premium** starting tomorrow for 1 year');
     }
     /*
@@ -88,10 +90,17 @@ dialog.matches('risk', [
     */
   },
   function (session, results) {
-        if (results.response) {
-          session.dialogData.program.premium = results.response;
-          builder.Prompts.text(session, "All set. Give me a few seconds to give you the best option");
-        }
+    // Recognize the premium
+    recognizer.recognize({ message: { text: results.response }, locale: 'en' }, (err, args) => {
+      const premium = (builder.EntityRecognizer.findEntity(args.entities || [], ENTITIES.NUMBER) || {}).entity;
+      if (args.intent === 'premium' && premium) {
+        session.dialogData.program.premium = results.response;
+        session.send("All set. Give me a few seconds to give you the best option");
+      } else {
+        // No premium provided it should repeat this step
+        session.endDialog('Sorry at we need a figure for the premium. We have to start again');
+      }
+    });
   },
   function (session, results) {
           var msg = new builder.Message(session);
@@ -115,4 +124,3 @@ dialog.matches('risk', [
           session.send(msg);    
   }
 ]);
-
