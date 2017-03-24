@@ -66,7 +66,6 @@ dialog.matches('risk', [
       var endDate = new Date();
       endDate.setFullYear(endDate.getFullYear() + 1);
       session.dialogData.program = {
-        countries: countries,
         customer: {
           name: customer
         },
@@ -74,6 +73,15 @@ dialog.matches('risk', [
         startDate: startDate,
         endDate: endDate
       };
+      var countryObjects = [];
+      countries.forEach(function(country) {
+        var countryObject = {
+          name: country,
+          solution: null
+        };
+        countryObjects.push(countryObject);
+      });
+      session.dialogData.program.countries = countryObjects;
       session.send("I have created a **"+businessLine+"** program  for **"+customer+"** in countries **"+countries+"**");
       builder.Prompts.text(session,'What is the expected **global premium** starting tomorrow for 1 year');
     }
@@ -96,31 +104,48 @@ dialog.matches('risk', [
       if (args.intent === 'premium' && premium) {
         session.dialogData.program.premium = results.response;
         session.send("All set. Give me a few seconds to give you the best option");
+        session.replaceDialog("ChooseSolution", session.dialogData);
       } else {
         // No premium provided it should repeat this step
         session.endDialog('Sorry at we need a figure for the premium. We have to start again');
       }
     });
-  },
-  function (session, results) {
-          var msg = new builder.Message(session);
-          msg.attachmentLayout(builder.AttachmentLayout.carousel)
-          var attachments = [];
-          session.dialogData.program.countries.forEach(function(country) {
-            attachments.push(
-              new builder.HeroCard(session)
-                  .title(country)
-                  .subtitle("Program Premium: "+session.dialogData.program.premium)
-                  .text("The recommended options **"+country+"** are)")
-                  .images([builder.CardImage.create(session, 'http://petersapparel.parseapp.com/img/whiteshirt.png')])
-                  .buttons([
-                      builder.CardAction.imBack(session, "choose program integrated for "+country, "integrated"),
-                      builder.CardAction.imBack(session, "choose program coordinated for "+country, "coordinated"),
-                      builder.CardAction.imBack(session, "choose program fos for "+country, "fos/fee of service")
-                  ])
-            );
-          });
-          msg.attachments(attachments);
-          session.send(msg);    
   }
+]);
+
+
+bot.dialog('ChooseSolution', [
+    function (session, args) {
+        // Save previous state (create on first call)
+        session.dialogData.index = args ? (args.index? args.index : 0) : 0;
+        session.dialogData.program = args ? args.program : null;
+
+        var msg = new builder.Message(session);
+        msg.attachmentLayout(builder.AttachmentLayout.carousel)
+        var attachments = [];
+        var country = session.dialogData.program.countries[session.dialogData.index];
+        attachments.push(
+          new builder.HeroCard(session)
+              .title(country.name)
+              .subtitle("Program Premium: "+session.dialogData.program.premium)
+              .text("The recommended options are)")
+              .images([builder.CardImage.create(session, 'http://petersapparel.parseapp.com/img/whiteshirt.png')])
+              .buttons([
+                  builder.CardAction.imBack(session, "choose solution integrated for "+country.name, "integrated"),
+                  builder.CardAction.imBack(session, "choose solution coordinated for "+country.name, "coordinated"),
+                  builder.CardAction.imBack(session, "choose solution fos for "+country.name, "fos/fee of service")
+              ])
+        );
+        msg.attachments(attachments);
+        session.send(msg);
+    },
+    function (session, results) {
+        session.dialogData.program.countries[session.dialogData.index].solution = results.response;
+        session.dialogData.index++;
+        if (session.dialogData.index >= session.dialogData.program.countries.length) {
+            session.replaceDialog('summary', session.dialogData);
+        } else {
+            session.replaceDialog('ChooseSolution', session.dialogData);
+        }
+    }
 ]);
