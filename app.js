@@ -136,12 +136,13 @@ bot.dialog('ChooseSolution', [
           country.solution = "integrated";
         }
         if (country && !args) {
+     
           country.solution = "coordinated";
         }
         if (!country) {
           session.replaceDialog('summary', session.dialogData);
           return;
-        }        
+        }
         attachments.push(
           new builder.HeroCard(session)
               .title(country.name)
@@ -149,13 +150,14 @@ bot.dialog('ChooseSolution', [
               .text("The recommended options are)")
               .images([builder.CardImage.create(session, 'http://petersapparel.parseapp.com/img/whiteshirt.png')])
               .buttons([
-                  builder.CardAction.imBack(session, "choose solution integrated for "+country.name, "integrated"),
+                  builder.CardAction.dialogAction(session, "SetSolution", "choose solution integrated for "+country.name, "integrated"),
                   builder.CardAction.imBack(session, "choose solution coordinated for "+country.name, "coordinated"),
                   builder.CardAction.imBack(session, "choose solution fos for "+country.name, "fos/fee of service")
               ])
         );
         msg.attachments(attachments);
         session.send(msg);
+        builder.Prompts.choice(session, "recommended options", ["integrated","coordinated","fos/fee of service"]);
     }
 ]);
 
@@ -178,6 +180,14 @@ bot.dialog('summary', [
     session.send(msg);
   }
 ]);
+
+
+bot.dialog('/SetSolution', [
+  (session, args) => {
+    //read data from args.data
+  }]);
+
+bot.beginDialogAction("SetSolution", "/SetSolution");
 
 function getFlagURL(name) {
   switch (name.toLowerCase()) {
