@@ -103,7 +103,7 @@ dialog.matches('risk', [
     recognizer.recognize({ message: { text: results.response }, locale: 'en' }, (err, args) => {
       const premium = (builder.EntityRecognizer.findEntity(args.entities || [], ENTITIES.NUMBER) || {}).entity;
       if (args.intent === 'premium' && premium) {
-        session.dialogData.program.premium = results.response;
+        session.dialogData.program.premium = premium;
         session.send("All set. Give me a few seconds to give you the best option");
         session.replaceDialog("ChooseSolution", session.dialogData);
       } else {
@@ -146,9 +146,9 @@ bot.dialog('ChooseSolution', [
         attachments.push(
           new builder.HeroCard(session)
               .title(country.name)
-              .subtitle("Program Premium: "+session.dialogData.program.premium)
+              .subtitle("Program Premium: "+session.dialogData.program.premium+"€")
               .text("The recommended options are)")
-              .images([builder.CardImage.create(session, 'http://petersapparel.parseapp.com/img/whiteshirt.png')])
+              .images([builder.CardImage.create(session, getFlagURL(country.name))])
               .buttons([
                   builder.CardAction.dialogAction(session, "SetSolution", "choose solution integrated for "+country.name, "integrated"),
                   builder.CardAction.imBack(session, "choose solution coordinated for "+country.name, "coordinated"),
@@ -167,19 +167,36 @@ bot.dialog('summary', [
   (session, args) => {
     session.dialogData.program = args.program;
     const program = session.dialogData.program;
-    const attachments = [new builder.HeroCard(session).title(`Program created for Customer ${program.customer.name}`).subtitle(`Business Line is ${program.businessLine}`).text(`A program has been created with an estimated global premium ${program.premium}€ for the period from ${program.startDate} to ${program.endDate}`)];
+    const attachments = [new builder.HeroCard(session).title(`Program created for Customer ${program.customer.name}`).subtitle(`Business Line is ${program.businessLine}`).text(`A program has been created with an estimated global premium of ${program.premium}€ for the period from ${program.startDate} to ${program.endDate}`)];
     program.countries.forEach(country => {
       attachments.push(new builder.HeroCard(session)
         .title(country.name)
         .subtitle(`Selected solution: ${country.solution}`)
         .images([builder.CardImage.create(session, getFlagURL(country.name || 'france'))]));
     });
+    attachments.push(new builder.HeroCard(session).title('Are you happy with the proposal').buttons([
+      builder.CardAction.openUrl(session, "https://www.axa-im.com/en/thank-you-query", "Yes"),
+      builder.CardAction.dialogAction(session, "advise", "I need advise", "I need advise")
+    ]));
     const msg = new builder.Message(session)
       .textFormat(builder.TextFormat.xml)
       .attachments(attachments);
     session.send(msg);
+  },
+  (session, results) => {
+    if (results.response === 'I need advise') {
+      builder.Prompts.text(session, 'Ok, we sent the information to the expert Hans. You can contact him at +49 663 233 122');
+    }
   }
 ]);
+
+// Create a dialog and bind it to a global action
+bot.dialog('/advise', [
+  function (session, args) {
+    session.endDialog("Ok. We have sent all info to the expert working today. Here is his contact data:\n\nSebastian Bohn: +44 238 233 032");
+  }
+]);
+bot.beginDialogAction('advise', '/advise');
 
 
 bot.dialog('/SetSolution', [
