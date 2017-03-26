@@ -120,6 +120,12 @@ function nextCountry(countries) {
   });
   return emptyOnes[0];
 }
+function nextCountryNamed(countries, name) {
+  var emptyOnes = countries.filter(function(country) {
+    return country.name == name;
+  });
+  return emptyOnes[0];
+}
 
 bot.dialog('ChooseSolution', [
     function (session, args) {
@@ -132,13 +138,6 @@ bot.dialog('ChooseSolution', [
         msg.attachmentLayout(builder.AttachmentLayout.carousel)
         var attachments = [];
         var country = nextCountry(session.dialogData.program.countries);
-        if (country && args && args.program) {
-          country.solution = "integrated";
-        }
-        if (country && !args) {
-     
-          country.solution = "coordinated";
-        }
         if (!country) {
           session.replaceDialog('summary', session.dialogData);
           return;
@@ -151,13 +150,13 @@ bot.dialog('ChooseSolution', [
               .images([builder.CardImage.create(session, getFlagURL(country.name))])
               .buttons([
                   builder.CardAction.dialogAction(session, "SetSolution", "choose solution integrated for "+country.name, "integrated"),
-                  builder.CardAction.imBack(session, "choose solution coordinated for "+country.name, "coordinated"),
-                  builder.CardAction.imBack(session, "choose solution fos for "+country.name, "fos/fee of service")
+                  builder.CardAction.dialogAction(session, "SetSolution", "choose solution coordinated for "+country.name, "coordinated"),
+                  builder.CardAction.dialogAction(session, "SetSolution", "choose solution fos for "+country.name, "fos/fee of service")
               ])
         );
         msg.attachments(attachments);
+        session.userData.program = session.dialogData.program;
         session.send(msg);
-        builder.Prompts.choice(session, "recommended options", ["integrated","coordinated","fos/fee of service"]);
     }
 ]);
 
@@ -182,11 +181,6 @@ bot.dialog('summary', [
       .textFormat(builder.TextFormat.xml)
       .attachments(attachments);
     session.send(msg);
-  },
-  (session, results) => {
-    if (results.response === 'I need advise') {
-      builder.Prompts.text(session, 'Ok, we sent the information to the expert Hans. You can contact him at +49 663 233 122');
-    }
   }
 ]);
 
@@ -201,8 +195,26 @@ bot.beginDialogAction('advise', '/advise');
 
 bot.dialog('/SetSolution', [
   (session, args) => {
-    //read data from args.data
-  }]);
+      var response = args.data;
+      session.dialogData.program = session.userData.program;
+      session.userData.program = null;
+      recognizer.recognize({ message: { text: response }, locale: 'en' }, (err, args) => {
+        const solution = (builder.EntityRecognizer.findEntity(args.entities || [], ENTITIES.SOLUTION) || {}).entity;
+        const countryName = (builder.EntityRecognizer.findEntity(args.entities || [], ENTITIES.COUNTRY) || {}).entity;
+        if (args.intent === 'solution' && solution && countryName) {
+          var country = nextCountryNamed(session.dialogData.program.countries, countryName);
+          if (country) {
+            country.solution = solution;
+          }
+          session.replaceDialog("ChooseSolution", session.dialogData);
+        } else {
+          // No premium provided it should repeat this step
+          session.send('Sorry did not understand your choice for the solution. Try again');
+          session.replaceDialog("ChooseSolution", session.dialogData);
+        }
+      });
+  }
+]);
 
 bot.beginDialogAction("SetSolution", "/SetSolution");
 
@@ -211,6 +223,8 @@ function getFlagURL(name) {
     case 'spain':
       return "http://www.geognos.com/api/en/countries/flag/ES.png";
     case 'us':
+      return "http://www.geognos.com/api/en/countries/flag/US.png";
+    case 'usa':
       return "http://www.geognos.com/api/en/countries/flag/US.png";
     case 'germany':
       return "http://www.geognos.com/api/en/countries/flag/DE.png";
