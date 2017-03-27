@@ -5,6 +5,7 @@ A simple echo bot for the Microsoft Bot Framework.
 var builder = require('./core/');
 var restify = require('restify');
 var request = require('request');
+require('dotenv').config();
 var _ = require('lodash');
 var moment = require('moment');
 
@@ -19,8 +20,8 @@ server.listen(port, function () {
 
 // Create chat connector for communicating with the Bot Framework Service
 var connector = new builder.ChatConnector({
-  appId: '17234ed8-f81b-42bf-9463-76267cb00426',
-  appPassword: 'JkwFVC9ediOzxdLbbTL4So6'
+  appId: process.env.MICROSOFT_APP_ID,
+  appPassword: process.env.MICROSOFT_APP_PASSWORD
 });
 
 // Listen for messages from users 
@@ -38,7 +39,7 @@ const ENTITIES = {
 };
 
 // Add global LUIS recognizer to bot
-var model = process.env.MICROSOFT_LUIS_MODEL || 'https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/05b2c787-1ca4-4d2c-8ae2-d50b64aed1da?subscription-key=28b3680a656742328525a2a4749646a9&verbose=true&q=';
+var model = process.env.MICROSOFT_LUIS_MODEL;
 var recognizer = new builder.LuisRecognizer(model);
 var dialog = new builder.IntentDialog({ recognizers: [recognizer] });
 bot.dialog('/', dialog);
